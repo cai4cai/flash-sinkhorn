@@ -30,8 +30,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ot-triton-lab/flash-sinkhorn"
-Repository = "https://github.com/ot-triton-lab/flash-sinkhorn"
+Homepage = "https://github.com/cai4cai/flash-sinkhorn"
+Repository = "https://github.com/cai4cai/flash-sinkhorn"
+Upstream = "https://github.com/ot-triton-lab/flash-sinkhorn"
 
 [project.optional-dependencies]
 dev = [

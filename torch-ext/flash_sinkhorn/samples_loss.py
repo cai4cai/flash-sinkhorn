@@ -356,7 +356,6 @@ class SamplesLoss(torch.nn.Module):
         threshold: Optional[float] = None,
         inner_iterations: int = 10,
         stop_mode: str = "potential_linf",
-        mass_tol: float = 1e-6,
         return_n_iters: bool = False,
         # Deprecated: FlashSinkhorn is now the only backend
         use_flashstyle: Optional[bool] = None,
@@ -480,7 +479,6 @@ class SamplesLoss(torch.nn.Module):
         if stop_mode not in ("potential_linf", "marginal"):
             raise ValueError(f'stop_mode must be "potential_linf" or "marginal", got {stop_mode!r}')
         self.stop_mode = stop_mode
-        self.mass_tol = float(mass_tol)
         # Only meaningful with potentials=True: the timed cost path
         # (_SinkhornCostFn.apply, an autograd.Function) can only return
         # tensors, so it has no side channel for a plain iteration count.
@@ -531,7 +529,6 @@ class SamplesLoss(torch.nn.Module):
             threshold=self.threshold,
             inner_iterations=self.inner_iterations,
             stop_mode=self.stop_mode,
-            mass_tol=self.mass_tol,
         )
 
     def _eps_list_for_inputs(self, x: torch.Tensor, y: torch.Tensor) -> Sequence[float]:
@@ -688,7 +685,6 @@ class SamplesLoss(torch.nn.Module):
                         threshold=self.threshold,
                         check_every=self.inner_iterations,
                         stop_mode=self.stop_mode,
-                        mass_tol=self.mass_tol,
                         return_n_iters=self.return_n_iters,
                         n_orig=n_orig if should_pad else None,
                         m_orig=m_orig if should_pad else None,
@@ -739,7 +735,6 @@ class SamplesLoss(torch.nn.Module):
                     threshold=self.threshold,
                     check_every=self.inner_iterations,
                     stop_mode=self.stop_mode,
-                    mass_tol=self.mass_tol,
                     return_n_iters=self.return_n_iters,
                     n_orig=n_orig if should_pad else None,
                     m_orig=m_orig if should_pad else None,
@@ -767,7 +762,6 @@ class SamplesLoss(torch.nn.Module):
                     threshold=self.threshold,
                     check_every=self.inner_iterations,
                     stop_mode=self.stop_mode,
-                    mass_tol=self.mass_tol,
                     return_n_iters=self.return_n_iters,
                     n_orig=n_orig if should_pad else None,
                     m_orig=m_orig if should_pad else None,

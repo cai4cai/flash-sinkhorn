@@ -32,18 +32,14 @@ def _marg_viol(
 ) -> float:
     """Max (L-infinity) marginal violation.
 
-    max(max|row_marg-a|, max|col_marg-b|) -- matches the SLOT repo's actual
-    working "marg_viol" stopping rule exactly (bench/solvers/sinkslot.py's
-    `_violation`/`_run_v5`: ``max(float((r-a).abs().max()), float((c-b).abs().max()))``).
-    A sum (total-variation) was used here previously -- and in bench_forward.py's
-    `_srot_sinkhorn`/`_sparsink_sinkhorn`, both since corrected to match -- but a
-    sum over n (or m) terms against a fixed absolute tolerance is essentially
-    unreachable at n=10,000 regardless of how converged the solve actually is,
-    which is why it looked like potential-change and marginal-violation modes
-    both failed to converge here: only potential-change genuinely doesn't fit
-    this regime; marginal-violation was just measured wrong. max is what SLOT
-    actually runs and is the n-invariant criterion its own ConvergenceCfg
-    documents.
+    Computes ``max(max|row_marg-a|, max|col_marg-b|)``.
+
+    Deliberately a max (L-infinity) rule rather than a sum (total variation).
+    A sum over n (or m) terms measured against a fixed absolute tolerance is
+    essentially unreachable at n=10,000 no matter how converged the solve
+    actually is, so a TV rule makes marginal-based stopping look broken when
+    it is only being measured wrong. The max rule is n-invariant and is what
+    downstream callers (e.g. cai4cai/SinkSLOT) rely on for parity.
     """
     # One sync (float() at the end), not two: the max itself runs on device first.
     return float(torch.maximum((row_marg - a).abs().max(), (col_marg - b).abs().max()))
@@ -71,7 +67,6 @@ def sinkhorn_flashstyle_alternating(
     threshold: Optional[float] = None,
     check_every: int = 5,
     stop_mode: str = "potential_linf",
-    mass_tol: float = 1e-6,
     return_n_iters: bool = False,
     ott_convention: bool = False,
     # Adaptive padding: mask convergence check to unpadded slices
@@ -109,14 +104,12 @@ def sinkhorn_flashstyle_alternating(
             the max (L-infinity) marginal-violation tolerance when stop_mode="marginal".
         check_every: Check convergence every N iterations
         stop_mode: "potential_linf" (default, native rule: max(|Δf|,|Δg|) < threshold)
-            or "marginal" (stop when max marginal violation <= threshold -- the
-            SLOT repo's actual working "marg_viol" rule, also matching
-            bench_forward.py's SROT/SinkSLOT/Spar-Sink "marginal" mode). Only
-            implemented for ott_convention=False (the default); raises
+            or "marginal" (stop when the max (L-infinity) violation of both the
+            row and column marginals <= threshold). Note this is a max rule, not
+            a total-variation sum, and it does not gate on total mass: max
+            marginal violation alone decides convergence. "marginal" is only
+            implemented for ott_convention=False (the default); it raises
             NotImplementedError otherwise.
-        mass_tol: Unused -- kept for call-site symmetry with StopCfg/bench_forward.py.
-            SLOT's own working "marginal" rule doesn't gate on mass either; only
-            max marginal violation decides convergence.
         return_n_iters: If True, also return number of iterations used
         ott_convention: If True, return potentials in OTT convention where
             log marginals are absorbed into potentials:
@@ -375,7 +368,6 @@ def sinkhorn_flashstyle_symmetric(
     threshold: Optional[float] = None,
     check_every: int = 5,
     stop_mode: str = "potential_linf",
-    mass_tol: float = 1e-6,
     return_n_iters: bool = False,
     return_prelast: bool = False,
     # Warm-start parameters (standard potentials, not shifted)
@@ -427,15 +419,12 @@ def sinkhorn_flashstyle_symmetric(
             marginal-violation tolerance when stop_mode="marginal".
         check_every: Check convergence every N iterations
         stop_mode: "potential_linf" (default, native rule: max(|Δf|,|Δg|) < threshold)
-            or "marginal" (stop when max marginal violation <= threshold -- the
-            SLOT repo's actual working "marg_viol" rule, also matching
-            bench_forward.py's SROT/SinkSLOT/Spar-Sink "marginal" mode). Unlike
+            or "marginal" (stop when the max (L-infinity) violation of both the
+            row and column marginals <= threshold). Note this is a max rule, not
+            a total-variation sum, and it does not gate on total mass. Unlike
             the alternating solver, NEITHER marginal is exact here after an
             update (symmetric/Jacobi damped averaging means both sides drift),
-            so both need a fresh check.
-        mass_tol: Unused -- kept for call-site symmetry with StopCfg/bench_forward.py.
-            SLOT's own working "marginal" rule doesn't gate on mass either; only
-            max marginal violation decides convergence.
+            so both genuinely need a fresh check.
         return_n_iters: If True, also return number of iterations used
         return_prelast: If True, also return pre-extrapolation potentials
         f_init: Initial f potential for warm-start (standard form, not shifted)

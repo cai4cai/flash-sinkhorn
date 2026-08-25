@@ -77,11 +77,11 @@ class _SinkhornConfig:
     # Adaptive padding: original unpadded sizes for masked early stopping
     n_orig: Optional[int] = None
     m_orig: Optional[int] = None
-    # Stopping rule: "potential_linf" (default, max(|df|,|dg|) < threshold) or
-    # "marginal" (total-variation marginal violation <= threshold and
-    # |mass-1| <= mass_tol -- same convention as bench_forward.py's SROT/SinkSLOT).
+    # Stopping rule: "potential_linf" (default, max(|df|,|dg|) < threshold)
+    # or "marginal" (max (L-infinity) violation of BOTH the row and column
+    # marginals <= threshold). Note "marginal" is a max/L-infinity rule, not
+    # a total-variation sum, and it does not gate on total mass.
     stop_mode: str = "potential_linf"
-    mass_tol: float = 1e-6
 
 
 # ---------------------------------------------------------------------------
@@ -350,7 +350,6 @@ class _SinkhornCostFn(torch.autograd.Function):
                 threshold=config.threshold,
                 check_every=config.inner_iterations,
                 stop_mode=config.stop_mode,
-                mass_tol=config.mass_tol,
             )
             f_grad, g_grad = f_cost, g_cost
 
@@ -403,7 +402,6 @@ class _SinkhornCostFn(torch.autograd.Function):
                 threshold=config.threshold,
                 check_every=config.inner_iterations,
                 stop_mode=config.stop_mode,
-                mass_tol=config.mass_tol,
                 n_orig=config.n_orig,
                 m_orig=config.m_orig,
             )
@@ -433,7 +431,6 @@ class _SinkhornCostFn(torch.autograd.Function):
                 threshold=config.threshold,
                 check_every=config.inner_iterations,
                 stop_mode=config.stop_mode,
-                mass_tol=config.mass_tol,
                 n_orig=config.n_orig,
                 m_orig=config.m_orig,
             )

@@ -38,4 +38,4 @@ __all__ = [
     "c_transform_cost",
     "__version__",
 ]
-__version__ = "0.3.3.post1"
+__version__ = "0.4.0"
